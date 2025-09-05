@@ -36,6 +36,13 @@ Requirements
 - Node.js and npm for client/server.
 - Python and pip for ML service; recommended virtual environment.
 
+Screenshots
+<img width="1728" height="792" alt="Screenshot 2025-09-05 130810" src="https://github.com/user-attachments/assets/0589b57b-82f4-4a80-bd7a-3408c83d56ef" />
+<img width="1460" height="822" alt="Screenshot 2025-09-05 130834" src="https://github.com/user-attachments/assets/9cdd1cda-42a8-464e-93db-651fd84135dc" />
+<img width="1499" height="835" alt="Screenshot 2025-09-05 130848" src="https://github.com/user-attachments/assets/291960d8-fe6c-4dc9-aa82-26234cb39ccf" />
+<img width="1584" height="822" alt="Screenshot 2025-09-05 130856" src="https://github.com/user-attachments/assets/0f2acaec-ead2-40f3-8bf7-cadaea1bdf3d" />
+<img width="1480" height="836" alt="image" src="https://github.com/user-attachments/assets/8d9cc374-fb52-4b7c-98f3-b6c3ff6e9d16" />
+
 How to Run (Local)  
 1) Clone  
 - git clone [https://github.com/<org>/<repo>.git](https://github.com/Thevishal-kumar/war-crisis.git) && cd <repo>
