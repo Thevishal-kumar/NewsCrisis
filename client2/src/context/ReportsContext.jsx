@@ -12,12 +12,14 @@ export function ReportsProvider({ children }) {
     }
   });
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false); 
+
   useEffect(() => {
     localStorage.setItem("verificationHistory", JSON.stringify(reports));
   }, [reports]);
 
   return (
-    <ReportsContext.Provider value={{ reports, setReports }}>
+    <ReportsContext.Provider value={{ reports, setReports, isAnalyzing, setIsAnalyzing }}>
       {children}
     </ReportsContext.Provider>
   );

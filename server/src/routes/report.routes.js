@@ -1,17 +1,19 @@
-// routes/report.routes.js
-import express from "express";
+import { Router } from 'express';
+import { 
+    getAllReports, 
+    createReport, 
+    castVote 
+} from '../controllers/report.controller.js';
 
-const router = express.Router();
+const router = Router();
 
-// Health-check / test route
-router.get("/test", (req, res) => {
-  console.log("🔥 /api/v1/reports/test hit");
-  res.json({ success: true, message: "Report route working!" });
-});
+// Route to get all reports
+router.route("/").get(getAllReports);
 
-// Example base route
-router.get("/", (req, res) => {
-  res.json({ items: [] });
-});
+// Route to create a new report (this should match your verification endpoint)
+router.route("/verify").post(createReport);
+
+// Route to cast a vote on a specific report by its ID
+router.route("/:id/vote").post(castVote);
 
 export default router;

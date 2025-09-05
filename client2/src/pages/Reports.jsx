@@ -89,22 +89,28 @@ function ReportsTable({ data }) {
 
 // --- Main Reports Component ---
 export default function Reports() {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
   const { account, connectWallet } = useContext(WalletContext);
-  const { reports, setReports } = useContext(ReportsContext);
+  const { reports, setReports, isAnalyzing, setIsAnalyzing } = useContext(ReportsContext);
+
   const API_BASE_URL = 'http://localhost:8000/api/v1';
 
-  // --- Fetch reports from server when account connects ---
+  // --- Fetch reports from backend and merge with localStorage/context ---
   useEffect(() => {
     const fetchReports = async () => {
       setError(null);
       try {
         const res = await fetch(`${API_BASE_URL}/reports`);
-        if (!res.ok) throw new Error('Could not fetch reports from the server.');
+        if (!res.ok) throw new Error('Could not fetch reports from server.');
         const data = await res.json();
-        const sortedReports = (data.items || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setReports(sortedReports); // updates context & localStorage
+        const fetchedReports = (data.items || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        setReports(current => {
+          // Merge backend + current context, remove duplicates
+          const combined = [...fetchedReports, ...current];
+          const unique = Array.from(new Map(combined.map(r => [r._id, r])).values());
+          return unique.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
       } catch (err) {
         setError(err.message);
       }
@@ -132,7 +138,7 @@ export default function Reports() {
         throw new Error(errData.error || 'Verification failed.');
       }
       const newReport = await res.json();
-      setReports(current => [newReport, ...current]);
+      setReports(current => [newReport, ...current]); // Add immediately to context
     } catch (err) {
       setError(err.message);
     } finally {

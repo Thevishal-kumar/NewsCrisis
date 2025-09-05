@@ -6,7 +6,7 @@ import Reports from './pages/Reports';
 import Verification from './pages/Verification';
 import Donation from './pages/Donation';
 import AuthPage from './pages/AuthPage';
-import MapView from './components/MapView.jsx';
+// import MapView from './components/MapView.jsx';
 
 function App() {
   return (
@@ -18,7 +18,7 @@ function App() {
           <Route path="verify" element={<Verification />} />
           <Route path="donate" element={<Donation />} />
           <Route path="login" element={<AuthPage />} />
-          <Route path="map" element={<MapView/>} />
+          {/* <Route path="map" element={<MapView/>} /> */}
         </Route>
       </Routes>
     </Router>

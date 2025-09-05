@@ -1,7 +1,12 @@
 import Report from '../models/report.models.js';
 
 const VOTE_THRESHOLD = 10; 
- 
+
+/**
+ * @desc    Get all reports from the database
+ * @route   GET /api/v1/reports
+ * @access  Public
+ */
 export const getAllReports = async (req, res) => {
     try {
         const reports = await Report.find({}).sort({ createdAt: -1 });
@@ -12,6 +17,11 @@ export const getAllReports = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Create a new report (used by your analysis/verify endpoint)
+ * @route   POST /api/v1/reports/verify
+ * @access  Public
+ */
 export const createReport = async (req, res) => {
     try {
         const { sourceType, source, label, score } = req.body;
@@ -35,6 +45,11 @@ export const createReport = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Cast a vote on a specific report
+ * @route   POST /api/v1/reports/:id/vote
+ * @access  Public (should be protected in a real application)
+ */
 export const castVote = async (req, res) => {
     try {
         const { id } = req.params;
@@ -75,7 +90,7 @@ export const castVote = async (req, res) => {
 
         await report.save();
 
-        res.status(200).json(report); 
+        res.status(200).json(report); // Send back the updated report
 
     } catch (error) {
         console.error("Error casting vote:", error);

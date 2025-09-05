@@ -1,163 +1,138 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Heart, Users, Zap, Globe, ExternalLink, Award, Sparkles } from 'lucide-react';
-import { ethers } from 'ethers';
-import { WalletContext } from '../context/WalletContext.jsx'; // Ensure path is correct
+import { Check, X, Loader, ShieldQuestion } from 'lucide-react';
+import { WalletContext } from '../context/WalletContext.jsx';
 
-// --- MOCK SMART CONTRACT DATA AND FUNCTIONS (Replace with actual contract interaction) ---
-// In a real dApp, this data would come from your smart contract.
-const mockDonationPools = [
-  { id: 1, title: 'Emergency Relief Fund', description: 'Rapid response for disasters and crises.', raised: 75000, target: 100000, icon: Zap, color: 'text-red-400' },
-  { id: 2, title: 'Community Resilience Program', description: 'Building stronger, more informed communities.', raised: 45000, target: 80000, icon: Users, color: 'text-green-400' },
-  { id: 3, title: 'Global Information Integrity', description: 'Fighting misinformation and promoting truth.', raised: 32000, target: 60000, icon: Globe, color: 'text-blue-400' },
-];
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
-const mockRecentDonations = [
-    { donor: '0x123...abc', amount: '10 USDC', fund: 'Emergency Relief Fund', time: '2m ago' },
-    { donor: '0x456...def', amount: '50 USDC', fund: 'Community Resilience Program', time: '5m ago' },
-    { donor: '0x789...ghi', amount: '25 USDC', fund: 'Global Information Integrity', time: '12m ago' },
-];
+export default function Dashboard() {
+  const { account, connectWallet } = useContext(WalletContext);
+  const [reports, setReports] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-// --- MAIN DONATION COMPONENT ---
-export default function Donation() {
-  const { account, signer, connectWallet } = useContext(WalletContext);
-  const [donationPools, setDonationPools] = useState([]);
-  const [userDonations, setUserDonations] = useState({}); // Tracks which funds the user has donated to
+  // Fetch reports from backend
+  const fetchReports = async () => {
+    if (!account) return setIsLoading(false);
+    setIsLoading(true);
+    setError(null);
 
-  // Fetch initial data (mocked for this example)
-  useEffect(() => {
-    if (account) {
-      // In a real app: fetchDonationPoolsFromContract();
-      setDonationPools(mockDonationPools);
+    try {
+      const res = await fetch(`${API_BASE_URL}/reports`);
+      if (!res.ok) throw new Error('Failed to fetch reports');
+      const data = await res.json();
+      setReports(data.items || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchReports();
+    // Optional: refresh every 15s
+    const interval = setInterval(fetchReports, 15000);
+    return () => clearInterval(interval);
   }, [account]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
-  };
-
-  const getProgressPercentage = (raised, target) => {
-    return Math.min((raised / target) * 100, 100);
-  };
-
-  const handleDonate = async (poolId, amountToDonate) => {
-    if (!signer) {
-      alert("Please ensure your wallet is connected.");
-      return;
-    }
-    // This is a placeholder for the actual transaction
-    console.log(`Initiating donation of ${amountToDonate} from ${account} to pool ${poolId}`);
-    alert(`Thank you for your donation to pool ${poolId}! In a real app, your wallet would now open to confirm the transaction.`);
-    
-    // Simulate successful donation for UI update
-    setUserDonations(prev => ({ ...prev, [poolId]: true }));
-  };
-
-  const handleMintNFT = (poolId, poolTitle) => {
-    alert(`You are now minting your "Proof-of-Help" NFT for the ${poolTitle} fund!`);
-    // In a real app: call a smart contract function like `mintProofOfHelpNFT(poolId)`
-  };
-
-  // Render a prompt if the wallet is not connected
   if (!account) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-4">Humanitarian Aid Portal</h1>
-        <div className="bg-slate-800 border-2 border-dashed border-blue-500 rounded-lg p-12">
-          <Heart className="h-16 w-16 text-blue-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Join the Movement</h2>
-          <p className="text-slate-400 mb-6">Connect your wallet to support verified global relief efforts.</p>
-          <button
-            onClick={connectWallet}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            Connect Wallet
-          </button>
-        </div>
+      <div className="text-center p-12 bg-slate-900 rounded-lg">
+        <ShieldQuestion className="mx-auto h-12 w-12 text-blue-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">Connect Wallet</h2>
+        <p className="text-slate-400 mb-6">Connect your wallet to view the verification dashboard.</p>
+        <button
+          onClick={connectWallet}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg"
+        >
+          Connect Wallet
+        </button>
       </div>
     );
   }
 
-  // Main component render for connected users
+  const totalReports = reports.length;
+  const pendingReports = reports.filter(r => r.status === 'pending').length;
+  const approvedReports = reports.filter(r => r.status === 'approved').length;
+  const rejectedReports = reports.filter(r => r.status === 'rejected').length;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Humanitarian Aid Portal</h1>
-        <p className="text-slate-400 mt-2">Supporting global relief efforts through transparent, verified donations.</p>
-      </div>
+      <h1 className="text-3xl font-bold text-white mb-6">Verification Dashboard</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Donation Pools Section */}
-        <div className="lg:col-span-2">
-          <h2 className="text-2xl font-bold text-white mb-6">Active Donation Funds</h2>
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader className="h-8 w-8 text-blue-500 animate-spin" />
+        </div>
+      ) : error ? (
+        <p className="text-red-500 text-center">{error}</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 text-center">
+              <p className="text-slate-400">Total Reports</p>
+              <p className="text-white font-bold text-2xl">{totalReports}</p>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 text-center">
+              <p className="text-slate-400">Pending</p>
+              <p className="text-white font-bold text-2xl">{pendingReports}</p>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 text-center">
+              <p className="text-slate-400">Approved</p>
+              <p className="text-white font-bold text-2xl">{approvedReports}</p>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 text-center">
+              <p className="text-slate-400">Rejected</p>
+              <p className="text-white font-bold text-2xl">{rejectedReports}</p>
+            </div>
+          </div>
+
           <div className="space-y-6">
-            {donationPools.map((pool) => {
-              const Icon = pool.icon;
-              const progressPercentage = getProgressPercentage(pool.raised, pool.target);
-              const hasDonated = userDonations[pool.id];
+            {reports.map(report => {
+              const approveVotes = report.approveVotes?.length || 0;
+              const rejectVotes = report.rejectVotes?.length || 0;
+              const totalVotes = approveVotes + rejectVotes;
+              const majority =
+                approveVotes > rejectVotes
+                  ? 'Approved'
+                  : rejectVotes > approveVotes
+                  ? 'Rejected'
+                  : 'Pending';
 
               return (
-                <div key={pool.id} className="bg-slate-800 rounded-lg p-6 border border-slate-700 transition-all duration-200">
-                  <div className="flex items-center mb-4">
-                    <Icon className={`h-8 w-8 ${pool.color}`} />
-                    <h3 className="text-lg font-semibold text-white ml-3">{pool.title}</h3>
-                  </div>
-                  <p className="text-slate-400 text-sm mb-4">{pool.description}</p>
-                  
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-slate-400">Progress</span>
-                      <span className="text-white">{formatCurrency(pool.raised)} of {formatCurrency(pool.target)}</span>
-                    </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-                    </div>
-                  </div>
-                  
-                  {/* --- INTERACTIVE BUTTON LOGIC --- */}
-                  {hasDonated ? (
-                    <button 
-                      onClick={() => handleMintNFT(pool.id, pool.title)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
+                <div key={report._id} className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-white font-semibold break-words">{report.source}</p>
+                    <p
+                      className={`font-bold ${
+                        majority === 'Approved'
+                          ? 'text-green-400'
+                          : majority === 'Rejected'
+                          ? 'text-red-400'
+                          : 'text-slate-400'
+                      }`}
                     >
-                      <Award className="h-4 w-4 inline mr-2" />
-                      Mint Your "Proof-of-Help" NFT
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleDonate(pool.id, '10 USDC')} // Example donation amount
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
-                    >
-                      <Heart className="h-4 w-4 inline mr-2" />
-                      Donate Now
-                    </button>
-                  )}
+                      {majority}
+                    </p>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-2">ML Confidence: {report.score.toFixed(1)}%</p>
+                  <div className="flex gap-4 items-center">
+                    <div className="flex gap-2">
+                      <Check className="text-green-400" />
+                      <span>{approveVotes}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <X className="text-red-400" />
+                      <span>{rejectVotes}</span>
+                    </div>
+                    <span className="text-slate-400 text-sm">Total Votes: {totalVotes}</span>
+                  </div>
                 </div>
               );
             })}
           </div>
-        </div>
-
-        {/* Live Activity Feed Sidebar */}
-        <div className="lg:col-span-1">
-          <h2 className="text-2xl font-bold text-white mb-6">Live Donations</h2>
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 space-y-4">
-            {mockRecentDonations.map((donation, index) => (
-              <div key={index} className="flex items-center text-sm">
-                <div className="bg-slate-700 p-2 rounded-full mr-3">
-                  <Sparkles className="h-5 w-5 text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-white">
-                    <span className="font-mono">{donation.donor}</span> donated <span className="font-semibold">{donation.amount}</span>
-                  </p>
-                  <p className="text-slate-400 text-xs">to {donation.fund} • {donation.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

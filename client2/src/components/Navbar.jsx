@@ -1,10 +1,9 @@
 import React, { useContext } from 'react';
-
 import { NavLink } from 'react-router-dom';
 import { Shield, BarChart3, FileText, CheckSquare, Heart, User } from 'lucide-react';
 import { WalletContext } from '../context/WalletContext.jsx';
 import { useNavigate } from 'react-router-dom';
-import { Map } from 'lucide-react';
+// import { Map } from 'lucide-react';
 
 function Navbar() {
   const { account, connectWallet } = useContext(WalletContext);
@@ -15,7 +14,7 @@ function Navbar() {
     { to: '/verify', label: 'Verification Queue', icon: CheckSquare },
     { to: '/donate', label: 'Donations', icon: Heart },
     { to: '/login', label: 'Login', icon: User },
-    { to: '/map', label: 'MapView', icon: Map },
+    // { to: '/map', label: 'MapView', icon: Map },
   ];
 
   const navigate = useNavigate();
