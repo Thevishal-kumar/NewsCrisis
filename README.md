@@ -37,13 +37,10 @@ Requirements
 - Python and pip for ML service; recommended virtual environment.
 
 Screenshots
-<img width="1726" height="713" alt="Screenshot 2025-09-05 130417" src="https://github.com/user-attachments/assets/08812df4-488b-4b0e-b1d0-7e6195987856" />
-<img width="1725" height="809" alt="Screenshot 2025-09-05 130406" src="https://github.com/user-attachments/assets/c226be15-22b2-4e6b-b09b-784f79e20d96" />
-<img width="1735" height="828" alt="Screenshot 2025-09-05 130358" src="https://github.com/user-attachments/assets/09b2e532-6812-4914-9c01-979f5ded44b3" />
-<img width="1888" height="674" alt="Screenshot 2025-09-05 122443" src="https://github.com/user-attachments/assets/42f285c0-3eb2-4c66-a640-8d3f9e1bbca6" />
-<img width="1716" height="838" alt="Screenshot 2025-09-05 130427" src="https://github.com/user-attachments/assets/21bf2e92-4045-452c-9095-8fa3d1daf814" />
-
-
+<img width="1728" height="792" alt="Screenshot 2025-09-05 130810" src="https://github.com/user-attachments/assets/0589b57b-82f4-4a80-bd7a-3408c83d56ef" />
+<img width="1460" height="822" alt="Screenshot 2025-09-05 130834" src="https://github.com/user-attachments/assets/9cdd1cda-42a8-464e-93db-651fd84135dc" />
+<img width="1499" height="835" alt="Screenshot 2025-09-05 130848" src="https://github.com/user-attachments/assets/291960d8-fe6c-4dc9-aa82-26234cb39ccf" />
+<img width="1584" height="822" alt="Screenshot 2025-09-05 130856" src="https://github.com/user-attachments/assets/0f2acaec-ead2-40f3-8bf7-cadaea1bdf3d" />
 
 How to Run (Local)  
 1) Clone  
