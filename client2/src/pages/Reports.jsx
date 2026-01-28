@@ -212,8 +212,8 @@ export default function Reports() {
   const [mounted, setMounted] = useState(false);
   const navigate = useNavigate(); // 2. Initialize Hook
 
-  const API_BASE_URL = 'http://localhost:8000/api/v1';
-
+  const API_BASE_URL = 'https://newsforge-u0s8.onrender.com/api/v1';
+ 
   useEffect(() => {
     setMounted(true);
   }, []);
