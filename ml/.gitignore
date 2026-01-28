@@ -1,2 +1,2 @@
-*.joblib
 *.csv
+.venv

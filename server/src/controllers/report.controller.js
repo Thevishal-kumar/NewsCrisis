@@ -5,9 +5,8 @@ const VOTE_THRESHOLD = 1;
 const runMLModel = async (text) => {
     try {
         // This talks to the terminal running 'python ml_server.py'
-        const response = await axios.post('http://127.0.0.1:5000/predict', {
-            text: text
-        });
+        const pythonUrl = process.env.PYTHON_SERVER_URL || 'http://127.0.0.1:5000';
+        const response = await axios.post(`${pythonUrl}/predict`, { text });
 
         // Return the data exactly as Python sent it ({ label: '...', score: ... })
         return response.data; 
