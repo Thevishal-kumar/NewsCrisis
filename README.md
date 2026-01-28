@@ -1,4 +1,5 @@
 LIVE LINK : https://news-crisis.vercel.app/
+
 NewsForge: A Web3-powered misinformation verification platform that analyzes URLs/text with ML, escalates edge cases to a wallet‑gated community for human review, and channels verified stories to transparent, blockchain‑tracked donations.
 
 Models and Services Implemented  
