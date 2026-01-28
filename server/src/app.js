@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -6,20 +5,16 @@ import cookieParser from "cookie-parser";
 // import { facilitator } from '@coinbase/x402';
 
 const app = express();
-// CORS configuration
 app.use(cors({
     origin: 'http://localhost:5173',
     credentials: true
 }));
 
-// Body parsing
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Debug every request
 app.use((req, res, next) => {
-    console.log(`👉 Incoming request: ${req.method} ${req.url}`);
     next();
 });
 
@@ -35,10 +30,8 @@ app.use("/api/v1/reports", reportRoute);
 
 app.use("/api/v1/verify", verifyRoute);
 
-// Serve static
 app.use(express.static("public"));
 
-// Start the server
 const PORT = 8000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

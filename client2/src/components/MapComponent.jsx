@@ -3,7 +3,7 @@ import {
   What3wordsAutosuggest,
   What3wordsMap
 } from "@what3words/react-components";
-
+   
 // IMPORTANT: Load your API keys from the .env file
 const API_KEY = import.meta.env.VITE_WHAT3WORDS_API_KEY;
 const MAP_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;

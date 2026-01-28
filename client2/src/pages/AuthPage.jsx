@@ -1,29 +1,51 @@
-import React, { useState } from 'react';
-import { Shield, Mail, Lock, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Shield, 
+  Mail, 
+  Lock, 
+  User, 
+  ArrowRight, 
+  CheckCircle2, 
+  AlertTriangle,
+  Fingerprint,
+  Key
+} from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-//  URL of your backend server
 const API_BASE_URL = 'http://localhost:8000/api/v1/';
 
 function AuthPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: ''
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user types
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    
     const endpoint = isLogin ? 'users/login' : 'users/register';
     const url = `${API_BASE_URL}${endpoint}`;
 
@@ -37,142 +59,188 @@ function AuthPage() {
       } else {
         response = await axios.post(url, formData);
       }
+      
+      // Small delay for UX transition
+      await new Promise(r => setTimeout(r, 800));
       console.log('Success:', response.data);
       navigate('/');
-    } catch (error) {
-      console.error('Authentication error:', error.response ? error.response.data : error.message);
-
+    } catch (err) {
+      console.error('Authentication error:', err);
+      setError(err.response?.data?.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
-    setFormData({
-      username: '',
-      email: '',
-      password: ''
-    });
-   
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center">
-            <Shield className="h-12 w-12 text-blue-400" />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-white">
-            {isLogin ? 'Sign in to NewsForge' : 'Create your NewsForge account'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-medium text-blue-400 hover:text-blue-300 transition-colors duration-200"
-            >
-              {isLogin ? 'Sign up' : 'Sign in'}
-            </button>
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center p-4 relative overflow-hidden font-sans selection:bg-blue-500/30">
+      
+      {/* --- Ambient Background --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 opacity-20" 
+             style={{ 
+               backgroundImage: 'linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)',
+               backgroundSize: '40px 40px',
+               maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
+             }}>
         </div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+      </div>
+
+      <div className={`max-w-md w-full relative z-10 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label htmlFor="username" className="sr-only">
-                  Username
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    required
-                    className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-slate-600 bg-slate-800 placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                    placeholder="Username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-            )}
-            
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-slate-600 bg-slate-800 placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Email address"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                />
-              </div>
+        {/* Card Container */}
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+          
+          {/* Decorative Glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-[50px] group-hover:bg-blue-500/20 transition-all duration-700"></div>
+
+          {/* Header */}
+          <div className="text-center mb-8 relative z-10">
+            <div className="mx-auto h-16 w-16 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-500/20 transform group-hover:scale-105 transition-transform duration-300">
+              <Shield className="h-8 w-8 text-blue-400" />
             </div>
-            
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none rounded-lg relative block w-full px-3 py-3 pl-10 border border-slate-600 bg-slate-800 placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
+            <h2 className="text-3xl font-extrabold text-white tracking-tight">
+              {isLogin ? 'Access Command' : 'Initialize Identity'}
+            </h2>
+            <p className="mt-3 text-sm text-slate-400">
+              {isLogin ? "Enter your credentials to access the secure terminal." : "Establish a new secure operator account."}
+            </p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            
+            {/* Username Field (Register Only) */}
+            <div className={`space-y-1 overflow-hidden transition-all duration-300 ${isLogin ? 'h-0 opacity-0' : 'h-20 opacity-100'}`}>
+              <div className="relative group/input">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-slate-500 group-focus-within/input:text-blue-400 transition-colors" />
+                </div>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required={!isLogin}
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-700 rounded-xl bg-slate-950/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                  placeholder="Operator ID (Username)"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  tabIndex={isLogin ? -1 : 0}
+                />
+              </div>
+            </div>
+            
+            {/* Email Field */}
+            <div className="relative group/input">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-slate-500 group-focus-within/input:text-blue-400 transition-colors" />
+              </div>
               <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-600 rounded bg-slate-800"
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="block w-full pl-10 pr-3 py-3 border border-slate-700 rounded-xl bg-slate-950/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                placeholder="Secure Email Link"
+                value={formData.email}
+                onChange={handleInputChange}
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-300">
-                Remember me
-              </label>
+            </div>
+            
+            {/* Password Field */}
+            <div className="relative group/input">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Key className="h-5 w-5 text-slate-500 group-focus-within/input:text-blue-400 transition-colors" />
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className="block w-full pl-10 pr-3 py-3 border border-slate-700 rounded-xl bg-slate-950/50 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                placeholder="Access Key (Password)"
+                value={formData.password}
+                onChange={handleInputChange}
+              />
             </div>
 
-            {isLogin && (
-              <div className="text-sm">
-                <a href="#" className="font-medium text-blue-400 hover:text-blue-300 transition-colors duration-200">
-                  Forgot your password?
-                </a>
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-600 rounded bg-slate-800 cursor-pointer"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-slate-400 cursor-pointer hover:text-slate-300">
+                  Keep Session Active
+                </label>
               </div>
-            )}
-          </div>
 
-          <div>
+              {isLogin && (
+                <a href="#" className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                  Lost Key?
+                </a>
+              )}
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              disabled={isLoading}
+              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all duration-300 shadow-lg 
+                ${isLoading 
+                  ? 'bg-slate-800 cursor-wait' 
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-900/20 hover:shadow-blue-900/40 hover:-translate-y-0.5'
+                }`}
             >
-              {isLogin ? 'Sign in' : 'Create account'}
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                {isLoading ? (
+                  <Fingerprint className="h-5 w-5 text-blue-300 animate-pulse" />
+                ) : (
+                  <Lock className="h-5 w-5 text-blue-300 group-hover:text-white transition-colors" />
+                )}
+              </span>
+              {isLoading ? 'Authenticating...' : (isLogin ? 'Authenticate Access' : 'Create Operator Identity')}
             </button>
+          </form>
+
+          {/* Switch Mode Toggle */}
+          <div className="mt-8 pt-6 border-t border-white/5 text-center">
+            <p className="text-sm text-slate-400">
+              {isLogin ? "New to the network? " : "Already verified? "}
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError(null);
+                  setFormData({ username: '', email: '', password: '' });
+                }}
+                className="font-bold text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1 group/link"
+              >
+                {isLogin ? 'Initialize Account' : 'Log In'}
+                <ArrowRight className="h-3 w-3 group-hover/link:translate-x-1 transition-transform" />
+              </button>
+            </p>
           </div>
-        </form>
+
+        </div>
+        
+        {/* Footer Info */}
+        <p className="text-center text-xs text-slate-500 mt-8 font-mono">
+          SECURE CONNECTION • 256-BIT ENCRYPTION • VERIFIED
+        </p>
+
       </div>
     </div>
   );

@@ -1,466 +1,346 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Search, Filter, Eye, ThumbsUp, ThumbsDown, AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { 
+  MapPin, 
+  Search, 
+  Filter, 
+  Eye, 
+  ThumbsUp, 
+  ThumbsDown, 
+  AlertTriangle, 
+  Clock, 
+  CheckCircle2, 
+  XCircle,
+  Navigation,
+  Globe,
+  Shield,
+  Plus,
+  Crosshair,
+  TrendingUp
+} from 'lucide-react';
+import { What3wordsAutosuggest, What3wordsMap } from "@what3words/react-components";
+import { WalletContext } from '../context/WalletContext.jsx';
+
+// Load API keys
+const API_KEY = import.meta.env.VITE_WHAT3WORDS_API_KEY;
+const MAP_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const MapView = () => {
+  const { account } = useContext(WalletContext);
+  
+  // State
   const [searchLocation, setSearchLocation] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [userLocation, setUserLocation] = useState(null);
+  const [showPendingOnly, setShowPendingOnly] = useState(false); // NEW: Focus mode
   const [selectedNews, setSelectedNews] = useState(null);
+  const [mapCenterWords, setMapCenterWords] = useState('filled.count.soap'); 
+  const [isSubmitting, setIsSubmitting] = useState(false); // NEW: Submission mode
+  const [mounted, setMounted] = useState(false);
 
-  // Mock news reports with locations
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Mock Data
   const newsReports = [
     {
       id: 1,
       title: 'Major Traffic Accident on Highway 101',
-      description: 'Multiple vehicles involved in collision causing major delays. Emergency services on scene.',
+      description: 'Multiple vehicles involved. Emergency services on scene.',
       location: 'San Francisco, CA',
-      coordinates: { lat: 37.7749, lng: -122.4194 },
-      timestamp: '2 hours ago',
+      w3w: 'filled.count.soap',
+      timestamp: '2h ago',
       category: 'emergency',
       verificationStatus: 'pending',
       verifications: { true: 12, false: 2, total: 14 },
-      reportedBy: 'Local Resident'
+      regionVotes: { 'Downtown': 5, 'SoMa': 8, 'Mission': 1 }
     },
     {
       id: 2,
-      title: 'New Restaurant Opens Downtown',
-      description: 'Popular chef opens new fusion restaurant in the heart of downtown district.',
+      title: 'Flash Flood Warning: Downtown Zone',
+      description: 'Heavy rainfall causing flooding. Avoid travel.',
       location: 'Austin, TX',
-      coordinates: { lat: 30.2672, lng: -97.7431 },
-      timestamp: '4 hours ago',
-      category: 'local',
-      verificationStatus: 'verified',
-      verifications: { true: 28, false: 1, total: 29 },
-      reportedBy: 'Food Blogger'
-    },
-    {
-      id: 3,
-      title: 'City Council Announces New Budget',
-      description: 'Major infrastructure investments planned for next fiscal year including road improvements.',
-      location: 'Seattle, WA',
-      coordinates: { lat: 47.6062, lng: -122.3321 },
-      timestamp: '6 hours ago',
-      category: 'politics',
-      verificationStatus: 'verified',
-      verifications: { true: 45, false: 3, total: 48 },
-      reportedBy: 'City Reporter'
-    },
-    {
-      id: 4,
-      title: 'Flash Flood Warning Issued',
-      description: 'Heavy rainfall expected to cause flooding in low-lying areas. Residents advised to avoid travel.',
-      location: 'Phoenix, AZ',
-      coordinates: { lat: 33.4484, lng: -112.0740 },
-      timestamp: '1 hour ago',
+      w3w: 'index.home.raft',
+      timestamp: '1h ago',
       category: 'emergency',
-      verificationStatus: 'disputed',
-      verifications: { true: 8, false: 15, total: 23 },
-      reportedBy: 'Weather Service'
+      verificationStatus: 'verified',
+      verifications: { true: 45, false: 1, total: 46 },
+      regionVotes: { 'Central': 30, 'East Austin': 10 }
     },
-    {
-      id: 5,
-      title: 'Celebrity Spotted at Local Coffee Shop',
-      description: 'Famous actor seen filming scenes at popular downtown coffee shop this morning.',
-      location: 'Los Angeles, CA',
-      coordinates: { lat: 34.0522, lng: -118.2437 },
-      timestamp: '30 minutes ago',
-      category: 'breaking',
-      verificationStatus: 'false',
-      verifications: { true: 3, false: 22, total: 25 },
-      reportedBy: 'Anonymous'
-    }
+    // ... add more mock data as needed
   ];
 
-  // Calculate distance between two coordinates (simplified)
-  const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+  // Logic: Filter news based on controls
+  const filteredNews = useMemo(() => {
+    return newsReports.filter(news => {
+      const matchesSearch = news.title.toLowerCase().includes(searchLocation.toLowerCase());
+      const matchesFilter = selectedFilter === 'all' || news.category === selectedFilter;
+      const matchesPending = showPendingOnly ? news.verificationStatus === 'pending' : true;
+      return matchesSearch && matchesFilter && matchesPending;
+    });
+  }, [searchLocation, selectedFilter, showPendingOnly]);
+
+  // Logic: Calculate Regional Trust Score based on visible reports
+  const regionalTrustScore = useMemo(() => {
+    if (filteredNews.length === 0) return 0;
+    const totalVerified = filteredNews.filter(n => n.verificationStatus === 'verified').length;
+    return Math.round((totalVerified / filteredNews.length) * 100);
+  }, [filteredNews]);
+
+  // Handler: Simulate submitting a report from map
+  const handleSubmitFromMap = () => {
+    if (!account) return alert("Please connect wallet to submit reports.");
+    setIsSubmitting(true);
+    // In a real app, this would open a modal with lat/long pre-filled
+    setTimeout(() => {
+        alert("Opening submission form for coordinates: ///" + mapCenterWords);
+        setIsSubmitting(false);
+    }, 1000);
   };
 
-  // Get user's location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log('Location access denied, using default location');
-          // Default to San Francisco for demo
-          setUserLocation({ lat: 37.7749, lng: -122.4194 });
-        }
-      );
-    } else {
-      // Default location if geolocation not supported
-      setUserLocation({ lat: 37.7749, lng: -122.4194 });
-    }
-  }, []);
-
-  // Add distance to news reports based on user location
-  const newsWithDistance = newsReports.map(news => ({
-    ...news,
-    distance: userLocation ? calculateDistance(
-      userLocation.lat, userLocation.lng,
-      news.coordinates.lat, news.coordinates.lng
-    ) : null
-  })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
-
-  // Filter news based on search and filter
-  const filteredNews = newsWithDistance.filter(news => {
-    const matchesSearch = news.title.toLowerCase().includes(searchLocation.toLowerCase()) ||
-                         news.location.toLowerCase().includes(searchLocation.toLowerCase());
-    const matchesFilter = selectedFilter === 'all' || news.category === selectedFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'verified': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'false': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'disputed': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
-      default: return <Clock className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'verified': return 'bg-green-100 text-green-800 border-green-200';
-      case 'false': return 'bg-red-100 text-red-800 border-red-200';
-      case 'disputed': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
+  // UI Helpers
   const getCategoryColor = (category) => {
     switch (category) {
-      case 'emergency': return 'bg-red-500';
-      case 'breaking': return 'bg-orange-500';
-      case 'politics': return 'bg-blue-500';
-      case 'local': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'emergency': return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'politics': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+      default: return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
     }
-  };
-
-  const handleVerification = (newsId, isTrue) => {
-    console.log(`User verified news ${newsId} as ${isTrue ? 'true' : 'false'}`);
-    alert(`Thank you for verifying this news as ${isTrue ? 'TRUE' : 'FALSE'}!`);
   };
 
   return (
-   <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">News Verification Map</h1>
-        <p className="text-gray-600 mt-2">Help verify local news reports in your area</p>
-        {userLocation && (
-          <p className="text-sm text-blue-600 mt-1">
-            📍 Your location detected - showing news sorted by proximity
-          </p>
-        )}
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-6 pt-24 relative overflow-hidden font-sans selection:bg-blue-500/30">
+      
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-20" 
+           style={{ backgroundImage: 'linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
       </div>
 
-      {/* Search and Filter Controls */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search news or location..."
-                value={searchLocation}
-                onChange={(e) => setSearchLocation(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+      <div className={`max-w-7xl mx-auto relative z-10 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        
+        {/* --- Header & Controls --- */}
+        <div className="flex flex-col xl:flex-row justify-between items-end mb-6 border-b border-white/5 pb-6 gap-6">
+          <div>
+            <h1 className="text-4xl font-extrabold text-white flex items-center gap-3">
+              <Globe className="h-10 w-10 text-blue-500" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                Global Intel Map
+              </span>
+            </h1>
+            <p className="text-slate-400 mt-2 pl-14 font-mono text-sm flex items-center gap-2">
+              <Navigation className="h-3 w-3 text-emerald-400" />
+              GEOSPATIAL VERIFICATION GRID • <span className="text-emerald-400">LIVE</span>
+            </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={selectedFilter}
-              onChange={(e) => setSelectedFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Categories</option>
-              <option value="emergency">Emergency</option>
-              <option value="breaking">Breaking News</option>
-              <option value="politics">Politics</option>
-              <option value="local">Local News</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map Area */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">News Locations</h3>
-            
-            {/* Interactive Map Placeholder */}
-            <div className="relative bg-gray-100 rounded-lg h-96 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg font-medium">Interactive News Map</p>
-                  <p className="text-gray-500 text-sm">Real map integration would show news locations here</p>
+          
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Regional Trust Score Widget */}
+            <div className="bg-slate-900/50 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-3">
+                <div className="text-right">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase">Region Trust</p>
+                    <p className={`text-xl font-bold ${regionalTrustScore > 70 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                        {regionalTrustScore}%
+                    </p>
                 </div>
-              </div>
-              
-              {/* Mock map pins */}
-              <div className="absolute inset-0">
-                {filteredNews.slice(0, 5).map((news, index) => (
-                  <div
-                    key={news.id}
-                    className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
-                    style={{
-                      left: `${20 + index * 15}%`,
-                      top: `${30 + index * 10}%`
-                    }}
-                    onClick={() => setSelectedNews(news)}
-                  >
-                    <div className={`w-4 h-4 rounded-full ${getCategoryColor(news.category)} border-2 border-white shadow-lg hover:scale-110 transition-transform`}></div>
-                    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow-lg text-xs whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity">
-                      {news.title.substring(0, 30)}...
-                    </div>
-                  </div>
-                ))}
-              </div>
+                <div className="h-8 w-8 rounded-full border-2 border-white/10 flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-slate-400" />
+                </div>
             </div>
 
-            {/* Map Legend */}
-            <div className="mt-4 flex flex-wrap gap-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Emergency</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Breaking News</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Politics</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Local News</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* News List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Nearby News Reports</h3>
-            <p className="text-sm text-gray-600">Help verify news in your area</p>
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {filteredNews.map((news) => (
-              <div 
-                key={news.id} 
-                className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                  selectedNews?.id === news.id ? 'bg-blue-50 border-blue-200' : ''
+            {/* Pending Only Toggle */}
+            <button 
+                onClick={() => setShowPendingOnly(!showPendingOnly)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+                    showPendingOnly 
+                    ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
+                    : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-500'
                 }`}
-                onClick={() => setSelectedNews(news)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium text-gray-900 line-clamp-2">{news.title}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{news.location}</p>
-                      {news.distance && (
-                        <p className="text-xs text-blue-600 font-medium">
-                          📍 {news.distance.toFixed(1)} km away
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1 ml-2">
-                      {getStatusIcon(news.verificationStatus)}
-                    </div>
-                  </div>
+            >
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm font-bold">Needs Verification</span>
+            </button>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(news.category)} text-white`}>
-                        {news.category}
-                      </span>
-                      <span className="text-xs text-gray-500">{news.timestamp}</span>
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {news.verifications.total} verifications
-                    </div>
-                  </div>
-
-                  {/* Verification Progress */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-green-600">True: {news.verifications.true}</span>
-                      <span className="text-red-600">False: {news.verifications.false}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1">
-                      <div
-                        className="bg-green-500 h-1 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${news.verifications.total > 0 ? (news.verifications.true / news.verifications.total) * 100 : 0}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {/* Submit Button */}
+            <button 
+                onClick={handleSubmitFromMap}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg hover:shadow-blue-500/25 transition-all active:scale-95"
+            >
+                {isSubmitting ? (
+                    <Clock className="h-4 w-4 animate-spin" />
+                ) : (
+                    <Plus className="h-4 w-4" />
+                )}
+                <span className="text-sm">Submit Intel Here</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Selected News Detail Modal */}
-      {selectedNews && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900">{selectedNews.title}</h3>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-sm text-gray-600">📍 {selectedNews.location}</span>
-                    {selectedNews.distance && (
-                      <span className="text-sm text-blue-600 font-medium">
-                        {selectedNews.distance.toFixed(1)} km from you
-                      </span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[75vh]">
+          
+          {/* --- LEFT: MAP CONTAINER --- */}
+          <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl flex flex-col">
+            
+            {/* Search Overlay */}
+            <div className="absolute top-4 left-4 z-10 w-full max-w-sm">
+               <div className="shadow-2xl rounded-xl overflow-hidden border border-white/10">
+                 <What3wordsAutosuggest api_key={API_KEY}>
+                   <input 
+                     type="text" 
+                     placeholder="/// Search 3-word address..." 
+                     className="w-full bg-slate-950/90 text-white p-3 text-sm focus:outline-none placeholder:text-slate-500"
+                   />
+                 </What3wordsAutosuggest>
+               </div>
+            </div>
+
+            {/* Crosshair Overlay (For submission targeting) */}
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+                <Crosshair className="h-8 w-8 text-blue-500/50 opacity-50" />
+            </div>
+
+            {/* THE MAP */}
+            <div className="flex-1 w-full h-full bg-slate-800 relative">
+              <What3wordsMap
+                id="w3w-map"
+                api_key={API_KEY}
+                map_api_key={MAP_API_KEY}
+                words={mapCenterWords}
+                zoom={13}
+                disable_default_ui={true}
+                zoom_control={true}
+              >
+                 <div slot="map" style={{ width: '100%', height: '100%' }}></div>
+              </What3wordsMap>
+            </div>
+
+            {/* Status Bar */}
+            <div className="bg-slate-950/90 backdrop-blur border-t border-white/5 p-3 flex justify-between items-center px-6">
+               <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-xs font-mono text-emerald-400">LIVE FEED</span>
+               </div>
+               <span className="text-xs text-slate-500 font-mono">
+                  {filteredNews.length} Active Nodes in View
+               </span>
+            </div>
+          </div>
+
+          {/* --- RIGHT: INTELLIGENCE FEED --- */}
+          <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col h-full overflow-hidden">
+            <div className="p-5 border-b border-white/5 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-400" />
+                {showPendingOnly ? 'Pending Verification' : 'Active Intel'}
+              </h3>
+              <span className="text-xs font-mono text-slate-500 bg-slate-800 px-2 py-1 rounded">
+                QUEUE: {filteredNews.length}
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {filteredNews.map((news) => (
+                <div 
+                  key={news.id}
+                  onClick={() => { setSelectedNews(news); setMapCenterWords(news.w3w); }}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer group hover:shadow-lg ${
+                    selectedNews?.id === news.id 
+                      ? 'bg-blue-600/10 border-blue-500/50 shadow-[0_0_15px_rgba(37,99,235,0.2)]' 
+                      : 'bg-slate-800/50 border-white/5 hover:border-blue-500/30 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${getCategoryColor(news.category)}`}>
+                      {news.category}
+                    </span>
+                    {news.verificationStatus === 'pending' && (
+                        <span className="flex items-center gap-1 text-[10px] text-yellow-400 animate-pulse">
+                            <Clock className="h-3 w-3" /> Voting Open
+                        </span>
                     )}
                   </div>
+                  
+                  <h4 className="text-sm font-bold text-slate-200 mb-1 line-clamp-2 group-hover:text-white transition-colors">
+                    {news.title}
+                  </h4>
+                  
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-3 font-mono">
+                    <MapPin className="h-3 w-3 text-blue-400" />
+                    <span>/// {news.w3w}</span>
+                  </div>
+
+                  {/* Voting Progress Mini-Bar */}
+                  <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden mb-2">
+                     <div 
+                        className="h-full bg-emerald-500" 
+                        style={{ width: `${(news.verifications.true / (news.verifications.total || 1)) * 100}%` }}
+                     ></div>
+                  </div>
+                  
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                     <span>{news.verifications.true} Verified</span>
+                     <span>{news.verifications.false} Reported</span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setSelectedNews(null)}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  ×
-                </button>
-              </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* --- DETAILS OVERLAY MODAL --- */}
+      {selectedNews && (
+        <div className="absolute top-28 left-6 z-20 w-80 lg:w-96 animate-in slide-in-from-left-4 fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-6 relative">
+            <button 
+              onClick={() => setSelectedNews(null)}
+              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border mb-4 inline-block ${getCategoryColor(selectedNews.category)}`}>
+              {selectedNews.category}
+            </span>
+
+            <h3 className="text-xl font-bold text-white mb-2">{selectedNews.title}</h3>
+            
+            <p className="text-sm text-slate-400 leading-relaxed mb-6 border-l-2 border-slate-700 pl-3">
+              {selectedNews.description}
+            </p>
+
+            {/* Regional Data Visualization */}
+            <div className="bg-slate-950/50 rounded-xl p-4 border border-white/5 mb-6">
+               <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs text-slate-400 font-mono uppercase">Votes by District</span>
+                  <BarChart3 className="h-3 w-3 text-slate-500" />
+               </div>
+               <div className="space-y-2">
+                  {selectedNews.regionVotes && Object.entries(selectedNews.regionVotes).map(([region, count]) => (
+                      <div key={region} className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 w-20 truncate">{region}</span>
+                          <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: `${(count / 20) * 100}%` }}></div>
+                          </div>
+                          <span className="text-[10px] text-white font-mono">{count}</span>
+                      </div>
+                  ))}
+               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div>
-                <p className="text-gray-700 leading-relaxed">{selectedNews.description}</p>
-                <div className="flex items-center space-x-4 mt-4 text-sm text-gray-600">
-                  <span>Reported by: {selectedNews.reportedBy}</span>
-                  <span>•</span>
-                  <span>{selectedNews.timestamp}</span>
-                </div>
-              </div>
-
-              {/* Verification Status */}
-              <div className={`p-4 rounded-lg border ${getStatusColor(selectedNews.verificationStatus)}`}>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(selectedNews.verificationStatus)}
-                  <span className="font-medium capitalize">{selectedNews.verificationStatus}</span>
-                </div>
-              </div>
-
-              {/* Verification Stats */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-3">Community Verification</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Verified as True</span>
-                    <span className="text-sm font-medium text-green-600">{selectedNews.verifications.true}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Marked as False</span>
-                    <span className="text-sm font-medium text-red-600">{selectedNews.verifications.false}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${selectedNews.verifications.total > 0 ? (selectedNews.verifications.true / selectedNews.verifications.total) * 100 : 0}%` 
-                      }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500 text-center">
-                    {selectedNews.verifications.total} total verifications
-                  </p>
-                </div>
-              </div>
-
-              {/* Verification Actions */}
-              {selectedNews.distance && selectedNews.distance < 50 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-3">
-                    🎯 You're nearby! Help verify this news
-                  </h4>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Since you're within {selectedNews.distance.toFixed(1)} km of this location, your verification carries extra weight.
-                  </p>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => handleVerification(selectedNews.id, true)}
-                      className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <ThumbsUp className="h-4 w-4" />
-                      <span>This is TRUE</span>
-                    </button>
-                    <button
-                      onClick={() => handleVerification(selectedNews.id, false)}
-                      className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      <ThumbsDown className="h-4 w-4" />
-                      <span>This is FALSE</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {selectedNews.distance && selectedNews.distance >= 50 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-700">
-                    ⚠️ You're {selectedNews.distance.toFixed(1)} km away from this location. 
-                    Only people within 50km can verify local news for accuracy.
-                  </p>
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <button className="flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-wider shadow-lg">
+                <ThumbsUp className="h-4 w-4" /> Verify Intel
+              </button>
+              <button className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-wider shadow-lg">
+                <ThumbsDown className="h-4 w-4" /> Report Fake
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* How It Works */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">How News Verification Works</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <MapPin className="h-6 w-6 text-blue-600" />
-            </div>
-            <h4 className="font-medium text-gray-900 mb-2">Location-Based</h4>
-            <p className="text-sm text-gray-600">Only people near the news location can verify its accuracy</p>
-          </div>
-          <div className="text-center p-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Eye className="h-6 w-6 text-green-600" />
-            </div>
-            <h4 className="font-medium text-gray-900 mb-2">Community Verified</h4>
-            <p className="text-sm text-gray-600">Multiple local residents verify each news report</p>
-          </div>
-          <div className="text-center p-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <CheckCircle className="h-6 w-6 text-purple-600" />
-            </div>
-            <h4 className="font-medium text-gray-900 mb-2">Real-Time Updates</h4>
-            <p className="text-sm text-gray-600">Verification status updates as more people contribute</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

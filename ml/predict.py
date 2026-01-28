@@ -13,18 +13,16 @@ def predict(text):
         
         # Load the pre-trained pipeline
         pipeline = joblib.load(model_path)
-        
+            
         # Make predictions
         prediction = pipeline.predict([text])[0]
         probabilities = pipeline.predict_proba([text])
         confidence = np.max(probabilities) * 100
-        
-        # --- FIX: Convert NumPy types to native Python types for JSON serialization ---
+       
         result = {
-            "label": str(prediction),       # Ensure label is a string
+            "label": str(prediction),       
             "score": confidence.item()      # Convert numpy.float64 to a standard Python float
         }
-        # --- End of FIX ---
         
         return result
         
@@ -35,7 +33,6 @@ def predict(text):
 if __name__ == "__main__":
     # Check if a command-line argument for the text was provided
     if len(sys.argv) > 1:
-        # --- FIX: Use sys.argv[1] to get the first argument, not sys.argv[11] ---
         input_text = sys.argv[1] 
         result = predict(input_text)
         print(json.dumps(result))

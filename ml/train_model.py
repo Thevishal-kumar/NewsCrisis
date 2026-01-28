@@ -15,12 +15,12 @@ def load_data(filepath):
     """Loads dataset from a CSV file and cleans it."""
     try:
         df = pd.read_csv(filepath)
-        print(f"✅ Dataset loaded successfully with {len(df)} rows.")
+        print(f"Dataset loaded successfully with {len(df)} rows.")
 
         # --- FIX: Add this line to remove rows with missing text or labels ---
         df.dropna(subset=['text', 'label'], inplace=True)
         
-        print(f"✨ Dataset cleaned. {len(df)} rows remaining after removing missing values.")
+        print(f"Dataset cleaned. {len(df)} rows remaining after removing missing values.")
         
         print("\nFirst 5 rows of cleaned data:")
         print(df.head())
@@ -28,7 +28,7 @@ def load_data(filepath):
         df.info()
         return df
     except FileNotFoundError:
-        print(f"❌ Error: Dataset file not found at '{filepath}'.")
+        print(f" Error: Dataset file not found at '{filepath}'.")
         print("Please create a CSV file with 'text' and 'label' columns.")
         return None
 
@@ -37,7 +37,7 @@ def load_data(filepath):
 def visualize_data_distribution(df):
     """Visualizes the distribution of labels in the dataset."""
     if df is None or 'label' not in df.columns:
-        print("⚠️ Cannot visualize: DataFrame is empty or 'label' column is missing.")
+        print(" Cannot visualize: DataFrame is empty or 'label' column is missing.")
         return
         
     plt.figure(figsize=(10, 6))
@@ -52,7 +52,7 @@ def visualize_data_distribution(df):
 def train_model(df):
     """Trains a text classification model and returns the pipeline."""
     if df is None:
-        print("❌ Model training skipped: No data available.")
+        print(" Model training skipped: No data available.")
         return None
 
     print("\n--- Starting Model Training ---")
@@ -77,7 +77,7 @@ def train_model(df):
     # Train the model
     print("Fitting the model on the training data...")
     model_pipeline.fit(X_train, y_train)
-    print("✅ Model training complete.")
+    print(" Model training complete.")
     
     return model_pipeline, X_test, y_test
 
@@ -85,7 +85,7 @@ def train_model(df):
 def evaluate_model(pipeline, X_test, y_test):
     """Evaluates the model and prints performance metrics."""
     if pipeline is None:
-        print("❌ Model evaluation skipped: No model trained.")
+        print(" Model evaluation skipped: No model trained.")
         return
 
     print("\n--- Evaluating Model Performance ---")
@@ -95,7 +95,7 @@ def evaluate_model(pipeline, X_test, y_test):
 
     # Calculate and print accuracy
     accuracy = accuracy_score(y_test, y_pred)
-    print(f"📊 Model Accuracy on Test Set: {accuracy * 100:.2f}%")
+    print(f" Model Accuracy on Test Set: {accuracy * 100:.2f}%")
 
     # Print a detailed classification report
     print("\nClassification Report:")
@@ -121,11 +121,11 @@ def evaluate_model(pipeline, X_test, y_test):
 def save_model(pipeline, filename):
     """Saves the trained model pipeline to a file."""
     if pipeline is None:
-        print("❌ Model saving skipped: No model to save.")
+        print(" Model saving skipped: No model to save.")
         return
         
     joblib.dump(pipeline, filename)
-    print(f"\n✅ Model successfully saved as '{filename}'")
+    print(f"\n Model successfully saved as '{filename}'")
     print("This file can now be loaded by your backend API for inference.")
 
 # --- Main Execution Block ---
