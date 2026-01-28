@@ -6,15 +6,15 @@ export function ReportsProvider({ children }) {
   const [reports, setReports] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
      
-  // --- CHANGE: Fetch initial reports from Backend ---
+  //Fetch initial reports from Backend
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/v1/reports');
+        const res = await fetch('https://newsforge-u0s8.onrender.com/api/v1/reports');
         if (res.ok) {
           const data = await res.json();
           setReports(data.items || []);
-        }
+        } 
       } catch (error) {
         console.error("Failed to load reports into context:", error);
       }

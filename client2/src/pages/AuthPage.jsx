@@ -13,8 +13,8 @@ import {
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/';
-
+const API_BASE_URL = 'https://newsforge-u0s8.onrender.com/api/v1/';
+ 
 function AuthPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);

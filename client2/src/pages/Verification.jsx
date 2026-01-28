@@ -17,8 +17,8 @@ import {
 import { WalletContext } from '../context/WalletContext.jsx';
 import { ReportsContext } from '../context/ReportsContext.jsx';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
-
+const API_BASE_URL = 'https://newsforge-u0s8.onrender.com/api/v1';
+ 
 export default function Verification() {
   const { account, connectWallet } = useContext(WalletContext);
   const { reports, setReports } = useContext(ReportsContext);

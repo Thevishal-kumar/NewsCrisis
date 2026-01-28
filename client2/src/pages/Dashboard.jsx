@@ -38,10 +38,10 @@ function Dashboard() {
     try {
       // Simulate a small delay for the animation effect if data loads too fast
       const [res] = await Promise.all([
-        fetch('http://localhost:8000/api/v1/reports'),
+        fetch('https://newsforge-u0s8.onrender.com/api/v1/reports'),
         new Promise(resolve => setTimeout(resolve, 800)) 
       ]);
-
+ 
       if (res.ok) {
         const data = await res.json();
         const items = data.items || [];
