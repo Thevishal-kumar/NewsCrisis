@@ -1,66 +1,28 @@
 import Report from '../models/report.models.js';
-import { spawn } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import axios from 'axios'; 
 
-// --- CONFIGURATION ---
-const VOTE_THRESHOLD = 1; 
+const VOTE_THRESHOLD = 1;
+const runMLModel = async (text) => {
+    try {
+        // This talks to the terminal running 'python ml_server.py'
+        const response = await axios.post('http://127.0.0.1:5000/predict', {
+            text: text
+        });
 
-// Helper to get directory name in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+        // Return the data exactly as Python sent it ({ label: '...', score: ... })
+        return response.data; 
 
-// RUN PYTHON SCRIPT
-const runMLModel = (text) => {
-    return new Promise((resolve, reject) => {
-        // 1. Path to your python script (Adjust 'ml_model' to your actual folder name if different)
-        // Assuming structure: /backend/controllers/.. /ml_model/predict.py
-        const scriptPath = path.join(__dirname, '../ml/predict.py'); 
+    } catch (error) {
+        console.error("ML Server Error:", error.message);
         
-        // 2. Spawn Python process
-        const pythonProcess = spawn('python', [scriptPath, text]);
-
-        let dataString = '';
-        let errorString = '';
-
-        // 3. Collect data from stdout
-        pythonProcess.stdout.on('data', (data) => {
-            dataString += data.toString();
-        });
-
-        // 4. Collect errors from stderr
-        pythonProcess.stderr.on('data', (data) => {
-            errorString += data.toString();
-        });
-
-        // 5. Handle process close
-        pythonProcess.on('close', (code) => {
-            if (code !== 0) {
-                console.error(`Python script exited with code ${code}: ${errorString}`);
-                return reject(new Error('ML Model execution failed'));
-            }
-
-            try {
-                // 6. Parse the JSON result from Python
-                const result = JSON.parse(dataString);
-                if (result.error) {
-                    reject(new Error(result.error));
-                } else {
-                    resolve(result);
-                }
-            } catch (err) {
-                console.error("Failed to parse Python output:", dataString);
-                reject(new Error('Invalid JSON from ML model'));
-            }
-        });
-    });
+        if (error.code === 'ECONNREFUSED') {
+            console.error("CRITICAL: Is 'ml_server.py' running? Connection refused.");
+        }
+        
+        return { label: 'Unverified', score: 0 };
+    }
 };
 
-/**
- * @desc    Create a new report (AND RUN ML ANALYSIS)
- * @route   POST /api/v1/verify
- * @access  Public
- */
 export const createReport = async (req, res) => {
     try {
         const { url, text, submittedBy } = req.body;
@@ -70,23 +32,31 @@ export const createReport = async (req, res) => {
             return res.status(400).json({ error: 'Please provide text or a URL to analyze.' });
         }
 
-        console.log(`Analyzing content: "${inputContent.substring(0, 50)}..."`);
+        // Check for duplicates
+        const existingReport = await Report.findOne({ source: inputContent });
+        if (existingReport) {
+            console.log(`Returning existing report.`);
+            return res.status(200).json(existingReport);
+        }
 
-        // --- STEP 1: RUN ML MODEL ---
+        // console.log(`[ML] Analyzing: "${inputContent.substring(0, 30)}..."`);
+
+        // RUN ML MODEL (Fast Way)
         const mlResult = await runMLModel(inputContent);
         
-        console.log("ML Result:", mlResult); // { label: 'Fake', score: 85.5 }
+        // console.log("[ML] Result received:", mlResult); 
 
-        // --- STEP 2: SAVE TO DB ---
+        // SAVE TO DB
         const newReport = await Report.create({
             sourceType: url ? 'url' : 'text',
             source: inputContent,
-            label: mlResult.label, // 'Real' or 'Fake' from Python
-            score: mlResult.score, // Confidence score from Python
+            label: mlResult.label || 'Unverified', 
+            score: mlResult.score || 0,
             submittedBy: submittedBy || 'Anonymous',
-            status: 'pending',     // Default status
+            status: 'pending',     
             approveVotes: 0,
-            rejectVotes: 0
+            rejectVotes: 0,
+            votedBy: []
         });
 
         res.status(201).json(newReport);
@@ -97,10 +67,6 @@ export const createReport = async (req, res) => {
     }
 };
 
-/**
- * @desc    Get all reports
- * @route   GET /api/v1/reports
- */
 export const getAllReports = async (req, res) => {
     try {
         const reports = await Report.find({}).sort({ createdAt: -1 });
@@ -111,10 +77,6 @@ export const getAllReports = async (req, res) => {
     }
 };
 
-/**
- * @desc    Cast a vote
- * @route   POST /api/v1/reports/:id/vote
- */
 export const castVote = async (req, res) => {
     try {
         const { id } = req.params;
@@ -123,16 +85,16 @@ export const castVote = async (req, res) => {
         const report = await Report.findById(id);
 
         if (!report) return res.status(404).json({ error: 'Report not found.' });
-        if (report.status !== 'pending') return res.status(400).json({ error: 'Report already finalized.' });
-        if (report.votedBy.includes(userId)) return res.status(400).json({ error: 'You have already voted.' });
+        
+        if (report.votedBy && report.votedBy.includes(userId)) {
+            return res.status(400).json({ error: 'You have already voted on this item.' });
+        }
 
-        // Update votes
         if (voteType === 'approve') report.approveVotes += 1;
         else if (voteType === 'reject') report.rejectVotes += 1;
         
         report.votedBy.push(userId);
 
-        // Check Threshold
         const totalVotes = report.approveVotes + report.rejectVotes;
         if (totalVotes >= VOTE_THRESHOLD) {
             report.status = report.approveVotes > report.rejectVotes ? 'approved' : 'rejected';

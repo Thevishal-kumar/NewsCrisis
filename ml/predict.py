@@ -19,9 +19,11 @@ def predict(text):
         probabilities = pipeline.predict_proba([text])
         confidence = np.max(probabilities) * 100
        
+        label_text = "Misinformation" if str(prediction) == "1" else "Verified Real"
+
         result = {
-            "label": str(prediction),       
-            "score": confidence.item()      # Convert numpy.float64 to a standard Python float
+            "label": label_text,       
+            "score": confidence.item()
         }
         
         return result

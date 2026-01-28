@@ -4,7 +4,7 @@ import {
     createReport, 
     castVote 
 } from '../controllers/report.controller.js';
-
+ 
 const router = Router();
 
 // Route to get all reports
