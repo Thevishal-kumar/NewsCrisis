@@ -7,7 +7,7 @@ import Verification from './pages/Verification';
 import Donation from './pages/Donation';
 import AuthPage from './pages/AuthPage';
 // import MapView from './components/MapView.jsx';
-
+import NotFound from './components/NotFound.jsx'
 function App() {
   return (
     <Router>
@@ -19,6 +19,7 @@ function App() {
           <Route path="donate" element={<Donation />} />
           <Route path="login" element={<AuthPage />} />
           {/* <Route path="map" element={<MapView/>} /> */}
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </Router>
