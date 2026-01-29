@@ -4,11 +4,10 @@ import axios from 'axios';
 const VOTE_THRESHOLD = 1;
 const runMLModel = async (text) => {
     try {
-        // This talks to the terminal running 'python ml_server.py'
         const pythonUrl = process.env.PYTHON_SERVER_URL || 'http://127.0.0.1:5000';
-        const response = await axios.post(`${pythonUrl}/predict`, { text });
-
-        // Return the data exactly as Python sent it ({ label: '...', score: ... })
+        const response = await axios.post(`${pythonUrl}/predict`, { text },{
+            timeout: 90000 
+        });
         return response.data; 
 
     } catch (error) {

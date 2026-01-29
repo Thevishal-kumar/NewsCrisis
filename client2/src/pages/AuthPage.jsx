@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+//for locally change backend url and frontend url
 const API_BASE_URL = 'https://newsforge-u0s8.onrender.com/api/v1/';
  
 function AuthPage() {
